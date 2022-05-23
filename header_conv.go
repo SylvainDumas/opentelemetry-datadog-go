@@ -11,7 +11,7 @@ import (
 
 // ____________________ Binary converter ____________________
 
-func newHeaderConvBinary() HeaderConverterPort {
+func newHeaderConvBinary() HeaderValueConverterPort {
 	// Trace and Span are a byte array representing 128-bits or 64-bits value stored
 	// Use binary.ByteOrder to transform byte array in/from uint64
 	var c uint16 = 1

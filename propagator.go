@@ -6,15 +6,12 @@ import (
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 var (
 	errMalformedTraceID = errors.New("cannot parse Datadog trace ID as 64bit unsigned int from header")
 	errMalformedSpanID  = errors.New("cannot parse Datadog span ID as 64bit unsigned int from header")
 )
-
-type propagatorConfigFn func(*propagator)
 
 // NewPropagator returns a new propagator which uses TextMap to inject
 // and extract values. It propagates trace and span IDs and baggage.
@@ -30,17 +27,14 @@ func NewPropagator(cfg ...propagatorConfigFn) propagation.TextMapPropagator {
 	}
 
 	// Set default header value
-	if newPropagator.datadogCfg.BaggagePrefix == "" {
-		newPropagator.datadogCfg.BaggagePrefix = tracer.DefaultBaggageHeaderPrefix
+	if newPropagator.headers.traceID == "" {
+		newPropagator.headers.traceID = DefaultTraceIDHeader
 	}
-	if newPropagator.datadogCfg.TraceHeader == "" {
-		newPropagator.datadogCfg.TraceHeader = tracer.DefaultTraceIDHeader
+	if newPropagator.headers.parentID == "" {
+		newPropagator.headers.parentID = DefaultParentIDHeader
 	}
-	if newPropagator.datadogCfg.ParentHeader == "" {
-		newPropagator.datadogCfg.ParentHeader = tracer.DefaultParentIDHeader
-	}
-	if newPropagator.datadogCfg.PriorityHeader == "" {
-		newPropagator.datadogCfg.PriorityHeader = tracer.DefaultPriorityHeader
+	if newPropagator.headers.sampledPriority == "" {
+		newPropagator.headers.sampledPriority = DefaultPriorityHeader
 	}
 
 	// Set default header converter
@@ -51,7 +45,7 @@ func NewPropagator(cfg ...propagatorConfigFn) propagation.TextMapPropagator {
 	return newPropagator
 }
 
-type HeaderConverterPort interface {
+type HeaderValueConverterPort interface {
 	// Trace
 	traceToDatadog(value trace.TraceID) string
 	traceFromDatadog(value string) (trace.TraceID, error)
@@ -62,8 +56,21 @@ type HeaderConverterPort interface {
 
 // Propagator serializes Span Context to/from Datadog headers.
 type propagator struct {
-	datadogCfg tracer.PropagatorConfig
-	headerConv HeaderConverterPort
+	headers struct {
+		// traceID specifies the map key that will be used to store the trace ID.
+		// It defaults to DefaultTraceIDHeader.
+		traceID string
+
+		// parentID specifies the map key that will be used to store the parent ID.
+		// It defaults to DefaultParentIDHeader.
+		parentID string
+
+		// sampledPriority specifies the map key that will be used to store the sampling priority.
+		// It defaults to DefaultPriorityHeader.
+		sampledPriority string
+	}
+
+	headerConv HeaderValueConverterPort
 }
 
 // Inject injects a context to the carrier following Datadog format.
@@ -75,9 +82,9 @@ func (obj *propagator) Inject(ctx context.Context, carrier propagation.TextMapCa
 	}
 
 	// Inject Trace ID, Span ID, Sampled in carrier
-	carrier.Set(obj.datadogCfg.TraceHeader, obj.headerConv.traceToDatadog(spanCtx.TraceID()))
-	carrier.Set(obj.datadogCfg.ParentHeader, obj.headerConv.spanToDatadog(spanCtx.SpanID()))
-	carrier.Set(obj.datadogCfg.PriorityHeader, otelToSampledDatadogHeader(spanCtx.TraceFlags()))
+	carrier.Set(obj.headers.traceID, obj.headerConv.traceToDatadog(spanCtx.TraceID()))
+	carrier.Set(obj.headers.parentID, obj.headerConv.spanToDatadog(spanCtx.SpanID()))
+	carrier.Set(obj.headers.sampledPriority, otelToSampledDatadogHeader(spanCtx.TraceFlags()))
 }
 
 // Extract gets a context from the carrier if it contains Datadog headers.
@@ -89,9 +96,9 @@ func (obj *propagator) Extract(ctx context.Context, carrier propagation.TextMapC
 	}
 
 	var (
-		traceID = carrier.Get(obj.datadogCfg.TraceHeader)
-		spanID  = carrier.Get(obj.datadogCfg.ParentHeader)
-		sampled = carrier.Get(obj.datadogCfg.PriorityHeader)
+		traceID = carrier.Get(obj.headers.traceID)
+		spanID  = carrier.Get(obj.headers.parentID)
+		sampled = carrier.Get(obj.headers.sampledPriority)
 	)
 	sc, err := obj.extract(traceID, spanID, sampled)
 	if err != nil || !sc.IsValid() {
@@ -123,9 +130,9 @@ func (obj *propagator) extract(traceID, spanID, sampled string) (trace.SpanConte
 // Fields returns the keys whose values are set with Inject.
 func (obj *propagator) Fields() []string {
 	return []string{
-		obj.datadogCfg.TraceHeader,
-		obj.datadogCfg.ParentHeader,
-		obj.datadogCfg.PriorityHeader,
+		obj.headers.traceID,
+		obj.headers.parentID,
+		obj.headers.sampledPriority,
 	}
 }
 
