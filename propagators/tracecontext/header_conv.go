@@ -1,4 +1,4 @@
-package datadog
+package tracecontext
 
 import (
 	"encoding/binary"
@@ -11,7 +11,7 @@ import (
 
 // ____________________ Binary converter ____________________
 
-func newHeaderConvBinary() HeaderValueConverterPort {
+func NewHeaderConvBinary() HeaderValueConverterPort {
 	// Trace and Span are a byte array representing 128-bits or 64-bits value stored
 	// Use binary.ByteOrder to transform byte array in/from uint64
 	var c uint16 = 1
@@ -51,11 +51,9 @@ func (obj *headerConvBinary) spanFromDatadog(value string) (spanID trace.SpanID,
 }
 
 func (obj *headerConvBinary) uint64ByteArrayToString(data []byte) string {
-	var id64b = obj.endian.Uint64(data)
-
 	// Format use is strconv.FormatUint(id, 10)
 	// https://github.com/DataDog/dd-trace-go/blob/v1.38.1/ddtrace/tracer/textmap.go#L246
-	return strconv.FormatUint(id64b, 10)
+	return strconv.FormatUint(obj.endian.Uint64(data), 10)
 }
 
 func (obj *headerConvBinary) uint64StringToByteArray(value string, dst []byte) error {

@@ -1,4 +1,4 @@
-package datadog
+package tracecontext
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ func Test_NewParse(t *testing.T) {
 		return strconv.FormatUint(valueInt, 10), nil
 	}
 
-	var headerConv = newHeaderConvBinary()
+	var headerConv = NewHeaderConvBinary()
 
 	var header = headerConv.traceToDatadog(traceID)
 	if expected, err := stringconv(traceID); err != nil {
@@ -56,7 +56,7 @@ func Benchmark_Conv(b *testing.B) {
 		return strconv.FormatUint(valueInt, 10), nil
 	}
 
-	var headerConv = newHeaderConvBinary()
+	var headerConv = NewHeaderConvBinary()
 
 	b.Run("stringconv", func(b *testing.B) {
 		b.ResetTimer()
