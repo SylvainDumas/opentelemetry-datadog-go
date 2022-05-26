@@ -16,10 +16,13 @@ var (
 // NewPropagator returns a new propagator which uses TextMap to inject
 // and extract values. It propagates trace and span IDs and baggage.
 // To use the defaults, nil may be provided in place of the config.
-func NewPropagator(cfg ...configFn) propagation.TextMapPropagator {
-	return &propagator{
-		conf: newConfig(cfg...),
+func NewPropagator(cfg ...configFn) (propagation.TextMapPropagator, error) {
+	propagatorConf, err := newConfig(cfg...)
+	if err != nil {
+		return nil, err
 	}
+
+	return &propagator{conf: propagatorConf}, nil
 }
 
 // propagator serializes Span Context to/from Datadog headers.
@@ -36,9 +39,9 @@ func (obj *propagator) Inject(ctx context.Context, carrier propagation.TextMapCa
 	}
 
 	// Inject Trace ID, Span ID, Sampled in carrier
-	carrier.Set(obj.conf.headers.traceID, obj.conf.headerConv.traceToDatadog(spanCtx.TraceID()))
-	carrier.Set(obj.conf.headers.parentID, obj.conf.headerConv.spanToDatadog(spanCtx.SpanID()))
-	carrier.Set(obj.conf.headers.sampledPriority, otelToSampledDatadogHeader(spanCtx.TraceFlags()))
+	carrier.Set(obj.conf.headerKey.TraceID, obj.conf.headerValueConv.traceToDatadog(spanCtx.TraceID()))
+	carrier.Set(obj.conf.headerKey.ParentID, obj.conf.headerValueConv.spanToDatadog(spanCtx.SpanID()))
+	carrier.Set(obj.conf.headerKey.SampledPriority, otelToSampledDatadogHeader(spanCtx.TraceFlags()))
 }
 
 // Extract gets a context from the carrier if it contains Datadog headers.
@@ -50,9 +53,9 @@ func (obj *propagator) Extract(ctx context.Context, carrier propagation.TextMapC
 	}
 
 	var (
-		traceID = carrier.Get(obj.conf.headers.traceID)
-		spanID  = carrier.Get(obj.conf.headers.parentID)
-		sampled = carrier.Get(obj.conf.headers.sampledPriority)
+		traceID = carrier.Get(obj.conf.headerKey.TraceID)
+		spanID  = carrier.Get(obj.conf.headerKey.ParentID)
+		sampled = carrier.Get(obj.conf.headerKey.SampledPriority)
 	)
 	sc, err := obj.extract(traceID, spanID, sampled)
 	if err != nil || !sc.IsValid() {
@@ -68,11 +71,11 @@ func (obj *propagator) extract(traceID, spanID, sampled string) (trace.SpanConte
 		err error
 	)
 
-	if scc.TraceID, err = obj.conf.headerConv.traceFromDatadog(traceID); err != nil {
+	if scc.TraceID, err = obj.conf.headerValueConv.traceFromDatadog(traceID); err != nil {
 		return trace.SpanContext{}, errMalformedTraceID
 	}
 
-	if scc.SpanID, err = obj.conf.headerConv.spanFromDatadog(spanID); err != nil {
+	if scc.SpanID, err = obj.conf.headerValueConv.spanFromDatadog(spanID); err != nil {
 		return trace.SpanContext{}, errMalformedSpanID
 	}
 
@@ -84,9 +87,9 @@ func (obj *propagator) extract(traceID, spanID, sampled string) (trace.SpanConte
 // Fields returns the keys whose values are set with Inject.
 func (obj *propagator) Fields() []string {
 	return []string{
-		obj.conf.headers.traceID,
-		obj.conf.headers.parentID,
-		obj.conf.headers.sampledPriority,
+		obj.conf.headerKey.TraceID,
+		obj.conf.headerKey.ParentID,
+		obj.conf.headerKey.SampledPriority,
 	}
 }
 

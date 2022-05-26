@@ -1,34 +1,24 @@
 package tracecontext
 
 import (
-	"strings"
+	"errors"
 
 	"go.opentelemetry.io/otel/trace"
 )
 
-// _____________________ With helpers _____________________
+// TODO Function doc
 
-func WithTraceIDHeader(header string) configFn {
-	return func(conf *config) {
-		conf.headers.traceID = strings.TrimSpace(header)
-	}
-}
+// _____________________ With option functions _____________________
 
-func WithParentIDHeader(header string) configFn {
+func WithHeaderKey(value HeaderKey) configFn {
 	return func(conf *config) {
-		conf.headers.parentID = strings.TrimSpace(header)
-	}
-}
-
-func WithSampledPriorityHeader(header string) configFn {
-	return func(conf *config) {
-		conf.headers.sampledPriority = strings.TrimSpace(header)
+		conf.headerKey = value
 	}
 }
 
 func WithHeaderValueConverter(headerConv HeaderValueConverterPort) configFn {
 	return func(conf *config) {
-		conf.headerConv = headerConv
+		conf.headerValueConv = headerConv
 	}
 }
 
@@ -45,7 +35,9 @@ type HeaderValueConverterPort interface {
 	spanFromDatadog(value string) (trace.SpanID, error)
 }
 
-// _____________________ Configuration _____________________
+// _____________________ HeaderKey _____________________
+
+var ErrDuplicatedHeaderKey = errors.New("duplicated header key")
 
 // Ref https://github.com/DataDog/dd-trace-go/blob/v1/ddtrace/tracer/textmap.go#L73-L89
 
@@ -63,7 +55,43 @@ const (
 	DefaultPriorityHeader = "x-datadog-sampling-priority"
 )
 
-func newConfig(cfg ...configFn) *config {
+type HeaderKey struct {
+	// TraceID specifies the key that will be used to store the trace ID.
+	// It defaults to DefaultTraceIDHeader.
+	TraceID string
+
+	// ParentID specifies the key that will be used to store the parent ID.
+	// It defaults to DefaultParentIDHeader.
+	ParentID string
+
+	// SampledPriority specifies the key that will be used to store the sampling priority.
+	// It defaults to DefaultPriorityHeader.
+	SampledPriority string
+}
+
+func (obj *HeaderKey) setDefaultIfEmpty() {
+	if obj.TraceID == "" {
+		obj.TraceID = DefaultTraceIDHeader
+	}
+	if obj.ParentID == "" {
+		obj.ParentID = DefaultParentIDHeader
+	}
+	if obj.SampledPriority == "" {
+		obj.SampledPriority = DefaultPriorityHeader
+	}
+}
+
+// Validate checks if header keys are valid (no duplication, ...)
+func (obj *HeaderKey) Validate() error {
+	if obj.TraceID == obj.ParentID || obj.TraceID == obj.SampledPriority || obj.ParentID == obj.SampledPriority {
+		return ErrDuplicatedHeaderKey
+	}
+	return nil
+}
+
+// _____________________ Configuration _____________________
+
+func newConfig(cfg ...configFn) (*config, error) {
 	var conf = &config{}
 
 	// Apply configurations
@@ -73,43 +101,28 @@ func newConfig(cfg ...configFn) *config {
 		}
 	}
 
+	// Apply default value on empty
 	conf.applyDefault()
 
-	return conf
+	// Check configuration is valid
+	if err := conf.headerKey.Validate(); err != nil {
+		return nil, err
+	}
+
+	return conf, nil
 }
 
 type config struct {
-	headers struct {
-		// traceID specifies the map key that will be used to store the trace ID.
-		// It defaults to DefaultTraceIDHeader.
-		traceID string
-
-		// parentID specifies the map key that will be used to store the parent ID.
-		// It defaults to DefaultParentIDHeader.
-		parentID string
-
-		// sampledPriority specifies the map key that will be used to store the sampling priority.
-		// It defaults to DefaultPriorityHeader.
-		sampledPriority string
-	}
-
-	headerConv HeaderValueConverterPort
+	headerKey       HeaderKey
+	headerValueConv HeaderValueConverterPort
 }
 
 func (obj *config) applyDefault() {
 	// Set default header value
-	if obj.headers.traceID == "" {
-		obj.headers.traceID = DefaultTraceIDHeader
-	}
-	if obj.headers.parentID == "" {
-		obj.headers.parentID = DefaultParentIDHeader
-	}
-	if obj.headers.sampledPriority == "" {
-		obj.headers.sampledPriority = DefaultPriorityHeader
-	}
+	obj.headerKey.setDefaultIfEmpty()
 
 	// Set default header converter
-	if obj.headerConv == nil {
-		obj.headerConv = NewHeaderConvBinary()
+	if obj.headerValueConv == nil {
+		obj.headerValueConv = NewHeaderConvBinary()
 	}
 }
