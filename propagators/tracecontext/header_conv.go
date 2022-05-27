@@ -2,6 +2,7 @@ package tracecontext
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -26,8 +27,8 @@ type headerConvBinary struct {
 	endian binary.ByteOrder
 }
 
-//convert OpenTelemetry 128-bits trace ID to Datadog 64-bits trace IDs
 func (obj *headerConvBinary) traceToDatadog(value trace.TraceID) string {
+	// Convert OpenTelemetry 128-bits trace ID to Datadog 64-bits trace IDs
 	// Datadog only uses last 64-bits data like for his propagator B3 extractTextMap function:
 	// https://github.com/DataDog/dd-trace-go/blob/v1.38.1/ddtrace/tracer/textmap.go#L370-L377
 	return obj.uint64ByteArrayToString(value[8:])
@@ -40,8 +41,8 @@ func (obj *headerConvBinary) traceFromDatadog(value string) (traceID trace.Trace
 	return
 }
 
-//convert OpenTelemetry 64-bits span ID to Datadog 64-bits span IDs
 func (obj *headerConvBinary) spanToDatadog(value trace.SpanID) string {
+	// Convert OpenTelemetry 64-bits span ID to Datadog 64-bits span IDs
 	return obj.uint64ByteArrayToString(value[:])
 }
 
@@ -66,6 +67,43 @@ func (obj *headerConvBinary) uint64StringToByteArray(value string, dst []byte) e
 
 	obj.endian.PutUint64(dst, id64b)
 	return nil
+}
+
+// ____________________ String converter ____________________
+
+func NewHeaderConvString() HeaderValueConverterPort { return &headerConvString{} }
+
+type headerConvString struct{}
+
+func (obj headerConvString) traceToDatadog(value trace.TraceID) string {
+	// Convert OpenTelemetry 128-bits trace ID to Datadog 64-bits trace IDs
+	valueStringHex := value.String()[16:]
+	// No error can happen since string comes from a fixed byte array
+	valueInt, _ := strconv.ParseUint(valueStringHex, 16, 64)
+	return strconv.FormatUint(valueInt, 10)
+}
+
+func (obj headerConvString) traceFromDatadog(value string) (trace.TraceID, error) {
+	// Datadog uses 64-bits data
+	id64b, err := parseUint64(value)
+	if err != nil {
+		return trace.TraceID{}, err
+	}
+	return trace.TraceIDFromHex(fmt.Sprintf("%032x", id64b))
+}
+
+func (obj headerConvString) spanToDatadog(value trace.SpanID) string {
+	// No error can happen since string comes from a fixed byte array
+	valueInt, _ := strconv.ParseUint(value.String(), 16, 64)
+	return strconv.FormatUint(valueInt, 10)
+}
+
+func (obj headerConvString) spanFromDatadog(value string) (trace.SpanID, error) {
+	id64b, err := parseUint64(value)
+	if err != nil {
+		return trace.SpanID{}, err
+	}
+	return trace.SpanIDFromHex(fmt.Sprintf("%016x", id64b))
 }
 
 // ___________________________ Convert from header ___________________________

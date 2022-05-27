@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func Test_HeaderKey_setDefaultIfEmpty(t *testing.T) {
@@ -68,35 +67,13 @@ func Test_Config_NewConfig(t *testing.T) {
 	}
 
 	// Check WithSampledPriorityHeader
-	var expectedConv = &test_HeaderValueConverterDummy{}
+	var expectedConv = NewHeaderConvString()
 	if conf, err := newConfig(WithHeaderValueConverter(expectedConv)); assert.NoError(err) {
 		assert.Equal(DefaultTraceIDHeader, conf.headerKey.TraceID)
 		assert.Equal(DefaultParentIDHeader, conf.headerKey.ParentID)
 		assert.Equal(DefaultPriorityHeader, conf.headerKey.SampledPriority)
 		assert.Equal(expectedConv, conf.headerValueConv)
 	}
-}
-
-func Test_Config_NewConfig_WithTraceIDHeader(t *testing.T) {
-}
-
-type test_HeaderValueConverterDummy struct {
-}
-
-func (obj *test_HeaderValueConverterDummy) traceToDatadog(value trace.TraceID) string {
-	return "dummy trace"
-}
-
-func (obj *test_HeaderValueConverterDummy) traceFromDatadog(value string) (trace.TraceID, error) {
-	return trace.TraceID{}, nil
-}
-
-func (obj *test_HeaderValueConverterDummy) spanToDatadog(value trace.SpanID) string {
-	return "dummy trace"
-}
-
-func (obj *test_HeaderValueConverterDummy) spanFromDatadog(value string) (trace.SpanID, error) {
-	return trace.SpanID{}, nil
 }
 
 func Test_Config_ApplyDefault(t *testing.T) {
