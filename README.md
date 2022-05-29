@@ -1,3 +1,5 @@
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=SylvainDumas_opentelemetry-datadog-go&metric=coverage)](https://sonarcloud.io/summary/new_code?id=SylvainDumas_opentelemetry-datadog-go)
+
 # opentelemetry datadog for go
 
 Package providing [OpenTelemetry](https://opentelemetry.io) context propagation for the Datadog propagation format.

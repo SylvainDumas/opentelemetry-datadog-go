@@ -1,11 +1,12 @@
-name: Test and analyze
+name: Build
 
 on:
   push:
     branches:
       - main
+      - feats/propagator_start
   pull_request:
-      types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened]
       
 env:
   # Go compiler
@@ -15,6 +16,7 @@ env:
   GO_REPORT_TEST_FILE: .report_tests.json
   # Sonarqube
   SONAR_SCANNER_VERSION: '4.7.0.2747'
+  SONAR_HOST_URL: 'https://sonarcloud.io'
 
 defaults:
   run:
@@ -22,14 +24,13 @@ defaults:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       # Setup source code
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          # Disabling shallow clone is recommended for improving relevancy of reporting
-          fetch-depth: 0
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       # Setup Go
       - name: 'Setup Go: Setup version ${{ env.GO_VERSION }}'
@@ -37,7 +38,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: 'Setup Go: Module cache'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: go-cache
         with:
           path: |
@@ -60,14 +61,13 @@ jobs:
         with:
           version: ${{ env.SONAR_SCANNER_VERSION }}
       - name: 'SonarQube: Cache packages'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
       - name: 'SonarQube: Analyze'
         run: sonar-scanner
-          -Dsonar.host.url=${{ inputs.sonar-url }}
-          -Dsonar.login=${{ secrets.access-token }}
-          -Dsonar.projectKey=${{ inputs.sonar-project-key }}
+          -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
           -Dsonar.go.coverage.reportPaths=${{ env.GO_REPORT_COVERAGE_FILE }}
           -Dsonar.go.tests.reportPaths=${{ env.GO_REPORT_TEST_FILE }}
