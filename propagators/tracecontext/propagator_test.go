@@ -10,16 +10,20 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+func Test_propagator_NewDefault(t *testing.T) {
+	assert.NotNil(t, NewDefault())
+}
+
 func Test_propagator_New(t *testing.T) {
-	_, err := NewPropagator()
+	_, err := New()
 	assert.NoError(t, err)
 
-	_, err = NewPropagator(WithHeaderKey(HeaderKey{"a", "a", ""}))
+	_, err = New(WithHeaderKey(HeaderKey{"a", "a", ""}))
 	assert.ErrorIs(t, err, ErrDuplicatedHeaderKey)
 }
 
 func Test_propagator_Inject(t *testing.T) {
-	prop, err := NewPropagator()
+	prop, err := New()
 	require.NoError(t, err)
 
 	var carrier = propagation.MapCarrier{}
@@ -45,7 +49,7 @@ func Test_propagator_Inject(t *testing.T) {
 }
 
 func Test_propagator_Extract(t *testing.T) {
-	prop, err := NewPropagator()
+	prop, err := New()
 	require.NoError(t, err)
 
 	var carrier = propagation.MapCarrier{}
@@ -83,7 +87,7 @@ func Test_propagator_Extract(t *testing.T) {
 }
 
 func Test_propagator_Fields(t *testing.T) {
-	if prop, err := NewPropagator(); assert.NoError(t, err) {
+	if prop, err := New(); assert.NoError(t, err) {
 		assert.ElementsMatch(t,
 			prop.Fields(),
 			[]string{DefaultParentIDHeader, DefaultPriorityHeader, DefaultTraceIDHeader},

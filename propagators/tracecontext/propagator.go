@@ -13,10 +13,20 @@ var (
 	errMalformedSpanID  = errors.New("cannot parse Datadog span ID as 64bit unsigned int from header")
 )
 
-// NewPropagator returns a new propagator which uses TextMap to inject
-// and extract values. It propagates trace and span IDs and baggage.
-// To use the defaults, nil may be provided in place of the config.
-func NewPropagator(cfg ...configFn) (propagation.TextMapPropagator, error) {
+// NewDefault returns a new propagator with default configuration which uses
+// TextMap to inject and extract values. It propagates trace and span IDs.
+func NewDefault() propagation.TextMapPropagator {
+	prop, err := New(nil)
+	if err != nil {
+		return nil
+	}
+	return prop
+}
+
+// New returns a new propagator which uses TextMap to inject and extract
+// values. It propagates trace and span IDs.
+// To use the defaults, call with nothing.
+func New(cfg ...configFn) (propagation.TextMapPropagator, error) {
 	propagatorConf, err := newConfig(cfg...)
 	if err != nil {
 		return nil, err

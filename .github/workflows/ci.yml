@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feats/propagator_start
   pull_request:
     types: [opened, synchronize, reopened]
       

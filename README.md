@@ -2,13 +2,21 @@
 
 # opentelemetry datadog for go
 
-Package providing [OpenTelemetry](https://opentelemetry.io) context propagation for the Datadog propagation format.
+[OpenTelemetry](https://opentelemetry.io) propagators are used to extract and inject context data from and into messages exchanged by applications. The propagator supported by this package is the Datadog Trace Context.
 
-This library provides support for propagating trace context in the Google Cloud `X-Cloud-Trace-Context` format.
+## Trace context propagation
+
+| Span Context      | Size     |      | DD header key               | Size    | Text Format     |
+|-------------------|----------|------|-----------------------------|---------|-----------------|
+| TraceId           | 128 bits | <--> | x-datadog-trace-id          | 64 bits | number base 10  |
+| SpanId            | 64 bits  | <--> | x-datadog-parent-id         | 64 bits | number base 10  |
+| Sampling decision | 1 bit    | <--> | x-datadog-sampling-priority | bool    | "0" or "1"      |
+
+You can find a getting started guide on [opentelemetry.io](https://opentelemetry.io/docs/instrumentation/go/getting-started).
 
 ### Getting Started
 
-```bash
+```shell
 go get github.com/SylvainDumas/opentelemetry-datadog-go
 ```
 
@@ -16,17 +24,21 @@ If you installed more packages than you intended, you can use `go mod tidy` to r
 
 ## Examples
 
-## Contributing
+```go
+import (
+    //...
+	"github.com/SylvainDumas/opentelemetry-datadog-go/propagators/tracecontext"
+	"go.opentelemetry.io/otel"
+)
 
-Before considering contributions to the project, please take a moment to read our brief [contribution guidelines](CONTRIBUTING.md).
+func initTracerProvider() {
+    // ...
+	otel.SetTextMapPropagator(tracecontext.NewDefault())
+}
+
+```
 
 ### Documentation
 
+- [Datadog](https://www.datadoghq.com)
 - [OpenTelemetry data sources](https://opentelemetry.io/docs/concepts/data-sources)
-
-    - [API](https://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1/ddtrace)
-    - [Tracing Go Applications](https://docs.datadoghq.com/tracing/setup/go/)
-    - [Continuous Go Profiler](https://docs.datadoghq.com/tracing/profiler/enabling/go).
-    - [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go)
-    - [OpenTelemetry-Go Contrib](https://github.com/open-telemetry/opentelemetry-go-contrib).
-    - [Datadog](https://www.datadoghq.com)
