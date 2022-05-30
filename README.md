@@ -1,44 +1,25 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=SylvainDumas_opentelemetry-datadog-go&metric=coverage)](https://sonarcloud.io/summary/new_code?id=SylvainDumas_opentelemetry-datadog-go)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # opentelemetry datadog for go
 
-[OpenTelemetry](https://opentelemetry.io) propagators are used to extract and inject context data from and into messages exchanged by applications. The propagator supported by this package is the Datadog Trace Context.
+The aim of this project is to use OpenTelemetry library in your project while
+- using Datadog as your trace and metric [ingest server](https://docs.datadoghq.com/tracing/trace_ingestion).
+- tracing request from/to another application using Datadog [tracing library](https://docs.datadoghq.com/tracing/setup_overview/setup/go?tab=containers#configuration), and so [propagator](https://github.com/DataDog/dd-trace-go/blob/v1/ddtrace/tracer/textmap.go#L127).
 
-## Trace context propagation
+[OpenTelemetry](https://opentelemetry.io) propagators are used to extract and inject context data from and into messages exchanged by applications. The propagator supported by this package is the Datadog
+- [Trace Context](propagators/tracecontext/README.md)
 
-| Span Context      | Size     |      | DD header key               | Size    | Text Format     |
-|-------------------|----------|------|-----------------------------|---------|-----------------|
-| TraceId           | 128 bits | <--> | x-datadog-trace-id          | 64 bits | number base 10  |
-| SpanId            | 64 bits  | <--> | x-datadog-parent-id         | 64 bits | number base 10  |
-| Sampling decision | 1 bit    | <--> | x-datadog-sampling-priority | bool    | "0" or "1"      |
+## Documentation
 
-You can find a getting started guide on [opentelemetry.io](https://opentelemetry.io/docs/instrumentation/go/getting-started).
-
-### Getting Started
-
-```shell
-go get github.com/SylvainDumas/opentelemetry-datadog-go
-```
-
-If you installed more packages than you intended, you can use `go mod tidy` to remove any unused packages.
-
-## Examples
-
-```go
-import (
-    //...
-	"github.com/SylvainDumas/opentelemetry-datadog-go/propagators/tracecontext"
-	"go.opentelemetry.io/otel"
-)
-
-func initTracerProvider() {
-    // ...
-	otel.SetTextMapPropagator(tracecontext.NewDefault())
-}
-
-```
-
-### Documentation
-
-- [Datadog](https://www.datadoghq.com)
+OpenTelemetry
+- [OpenTelemetry](https://opentelemetry.io)
 - [OpenTelemetry data sources](https://opentelemetry.io/docs/concepts/data-sources)
+- [OpenTelemetry Registry](https://opentelemetry.io/registry)
+- [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go)
+- [OpenTelemetry-Go Contrib](https://github.com/open-telemetry/opentelemetry-go-contrib).
+
+Datadog
+- [Datadog](https://www.datadoghq.com)
+- [Tracing Go Applications](https://docs.datadoghq.com/tracing/setup/go/)
+- [Tracing library](https://github.com/DataDog/dd-trace-go)
